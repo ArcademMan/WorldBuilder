@@ -3,13 +3,14 @@ import type { FieldDef, FieldValue } from "../../types";
 import { BooleanField } from "./BooleanField";
 import { DateField } from "./DateField";
 import { MarkdownField } from "./MarkdownField";
+import { ImageField } from "./ImageField";
+import { ImageListField } from "./ImageListField";
 import { NumberField } from "./NumberField";
 import { RefField } from "./RefField";
 import { RefListField } from "./RefListField";
 import { StringField } from "./StringField";
 import { StringListField } from "./StringListField";
 import { TextField } from "./TextField";
-import { UnsupportedField } from "./UnsupportedField";
 import { VocabField } from "./VocabField";
 import { VocabListField } from "./VocabListField";
 
@@ -127,8 +128,23 @@ export function FieldRenderer({ def, value, onChange, disabled }: Props) {
         />
       );
     case "image":
+      return (
+        <ImageField
+          def={def}
+          value={asString(value)}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
     case "imageList":
-      return <UnsupportedField def={def} />;
+      return (
+        <ImageListField
+          def={def}
+          value={asStringList(value)}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
   }
 }
 

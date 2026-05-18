@@ -2,6 +2,8 @@ export * from "./BooleanField";
 export * from "./DateField";
 export * from "./FieldRenderer";
 export * from "./FormField";
+export * from "./ImageField";
+export * from "./ImageListField";
 export * from "./MarkdownField";
 export * from "./NumberField";
 export * from "./RefField";

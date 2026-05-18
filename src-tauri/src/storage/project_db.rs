@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS entry_vocab_refs (
     PRIMARY KEY (entry_id, field_key, position)
 );
 
+-- Imported assets (images today, extensible). The actual file lives at
+-- <project>/assets/images/<id><ext>; this table holds only metadata.
+-- Entries reference assets by id from image / imageList fields.
+CREATE TABLE IF NOT EXISTS assets (
+    id                TEXT PRIMARY KEY,
+    mime_type         TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    byte_size         INTEGER NOT NULL,
+    created_at        TEXT NOT NULL
+);
+
 -- Entry-to-entry references (ref / refList fields). CASCADE on both sides
 -- keeps the table consistent: deleting either endpoint drops the link, so
 -- backlink queries never see dangling rows.

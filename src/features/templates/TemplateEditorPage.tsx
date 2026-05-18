@@ -11,6 +11,12 @@ import styles from "./TemplateEditorPage.module.css";
 
 const KEY_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 
+/**
+ * Keys claimed by the entry's first-class columns. Letting a user reuse
+ * them would put two inputs on screen editing different values.
+ */
+const RESERVED_KEYS = new Set(["name", "summary", "tags", "body", "images"]);
+
 function blankField(): FieldDef {
   return { key: "", label: "", type: "string" };
 }
@@ -42,6 +48,10 @@ function validateFields(fields: FieldDef[]): FieldErrors {
     if (!KEY_REGEX.test(key)) {
       errors[i] =
         "Key must start with a letter and contain only letters, digits, and underscores.";
+      return;
+    }
+    if (RESERVED_KEYS.has(key.toLowerCase())) {
+      errors[i] = `"${key}" is reserved (used by the entry's built-in fields).`;
       return;
     }
     if (seen.has(key)) {

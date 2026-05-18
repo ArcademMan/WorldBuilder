@@ -7,7 +7,6 @@ import { useCurrentProject } from "../../hooks/use-current-project";
 import { useEntriesContext } from "../project-shell/entries-context";
 import { useTemplatesContext } from "../project-shell/templates-context";
 import type { Entry, FieldDef, FieldValue } from "../../types";
-import { SYSTEM_TAGS_VOCAB_ID } from "../../types";
 
 import { BacklinksPanel } from "./BacklinksPanel";
 import styles from "./EntryEditorPage.module.css";
@@ -17,18 +16,6 @@ const NAME_DEF: FieldDef = {
   label: "Name",
   type: "string",
   required: true,
-};
-const SUMMARY_DEF: FieldDef = {
-  key: "summary",
-  label: "Summary",
-  type: "string",
-  helpText: "Short, one-line description shown in lists.",
-};
-const TAGS_DEF: FieldDef = {
-  key: "tags",
-  label: "Tags",
-  type: "vocabList",
-  vocabularyId: SYSTEM_TAGS_VOCAB_ID,
 };
 const BODY_DEF: FieldDef = {
   key: "body",
@@ -124,10 +111,6 @@ export function EntryEditorPage() {
 
   const onName = (v: FieldValue | null) =>
     patch({ name: typeof v === "string" ? v : "" });
-  const onSummary = (v: FieldValue | null) =>
-    patch({ summary: typeof v === "string" ? v : undefined });
-  const onTags = (v: FieldValue | null) =>
-    patch({ tags: Array.isArray(v) ? v : [] });
   const onBody = (v: FieldValue | null) =>
     patch({ body: typeof v === "string" ? v : "" });
 
@@ -169,13 +152,6 @@ export function EntryEditorPage() {
 
       <section className={styles.section}>
         <FieldRenderer def={NAME_DEF} value={draft.name} onChange={onName} disabled={busy} />
-        <FieldRenderer
-          def={SUMMARY_DEF}
-          value={draft.summary ?? null}
-          onChange={onSummary}
-          disabled={busy}
-        />
-        <FieldRenderer def={TAGS_DEF} value={draft.tags} onChange={onTags} disabled={busy} />
       </section>
 
       {template && template.fields.length > 0 && (

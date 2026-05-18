@@ -2,6 +2,7 @@
 //! project data on disk; they do not contain business policy and do not
 //! know about Tauri commands.
 
+pub mod asset_store;
 pub mod entry_store;
 pub mod paths;
 pub mod project_db;
