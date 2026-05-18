@@ -71,6 +71,9 @@ export function ProjectSidebar({ projectName }: Props) {
       </section>
 
       <footer className={styles.footer}>
+        <Link to="/project/templates" className={styles.footerLink}>
+          📐 Templates
+        </Link>
         <Link to="/project/vocabularies" className={styles.footerLink}>
           🗂 Vocabularies
         </Link>

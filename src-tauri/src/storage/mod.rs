@@ -3,12 +3,11 @@
 //! know about Tauri commands.
 
 pub mod entry_store;
-pub mod json_io;
 pub mod paths;
+pub mod project_db;
 pub mod project_store;
 pub mod recents_store;
-pub mod starter;
+pub mod starter_templates;
 pub mod template_store;
 pub mod timestamp;
-pub mod vocab_db;
 pub mod vocab_store;

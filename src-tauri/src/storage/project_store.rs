@@ -1,81 +1,97 @@
-//! Project-level CRUD: creating a fresh project folder, opening an
-//! existing one. Higher-level than `json_io`; orchestrates filesystem
-//! layout + starter content.
+//! Project lifecycle: create_project (init DB + seed) and open_project
+//! (validate DB + read metadata). Everything lives inside project.db —
+//! there is no JSON marker on disk.
 
 use std::fs;
 use std::path::Path;
 
+use rusqlite::{params, OptionalExtension};
 use tauri::AppHandle;
 
 use crate::domain::project::{Project, FORMAT_VERSION};
 use crate::error::{AppError, AppResult};
-use crate::storage::json_io;
 use crate::storage::paths::ProjectPaths;
-use crate::storage::starter;
+use crate::storage::project_db;
+use crate::storage::starter_templates;
 use crate::storage::timestamp::now_iso;
-use crate::storage::vocab_db;
 
-/// Creates the folder structure for a brand-new project at `root`.
-/// Fails if `root` already contains a `worldbuilder.json` (to avoid
-/// silently overwriting an existing project). Other files in `root`
-/// are tolerated so the user can pick an empty-but-pre-created folder.
-pub fn create_project(app: &AppHandle, root: &Path, name: &str) -> AppResult<Project> {
+/// Initializes a brand-new project in `root`. The folder may exist but
+/// must not already contain a `project.db`. Creates the SQLite database,
+/// seeds the system vocabularies and the starter templates.
+///
+/// `app` is unused for now — kept in the signature for symmetry with the
+/// previous bundle-resource-based implementation and because future
+/// asset-related work will need it.
+pub fn create_project(_app: &AppHandle, root: &Path, name: &str) -> AppResult<Project> {
     fs::create_dir_all(root)?;
 
     let paths = ProjectPaths::new(root);
-    if paths.manifest().exists() {
+    if paths.project_db().exists() {
         return Err(AppError::FolderNotEmpty(root.display().to_string()));
     }
 
-    fs::create_dir_all(paths.templates_dir())?;
-    fs::create_dir_all(paths.entries_dir())?;
     fs::create_dir_all(paths.images_dir())?;
 
-    let project = Project {
+    let now = now_iso();
+    {
+        let conn = project_db::open_or_create(&paths.project_db())?;
+        conn.execute(
+            "INSERT INTO project_meta (id, name, format_version, created_at)
+             VALUES (1, ?1, ?2, ?3)",
+            params![name, FORMAT_VERSION, now],
+        )?;
+        project_db::seed_system_vocabularies(&conn)?;
+    }
+
+    starter_templates::seed_starter_templates(root)?;
+
+    Ok(Project {
         format_version: FORMAT_VERSION,
         name: name.to_string(),
-        created_at: now_iso(),
-    };
-
-    json_io::write_json(&paths.manifest(), &project)?;
-    starter::copy_starter_templates(app, &paths)?;
-
-    // Initialize the vocabularies DB with the system tags vocab.
-    let conn = vocab_db::open_or_create(&paths.vocab_db())?;
-    vocab_db::seed_system_vocabularies(&conn)?;
-
-    Ok(project)
+        created_at: now,
+    })
 }
 
-/// Reads and validates the manifest of an existing project, running
-/// any necessary auto-migrations along the way.
+/// Reads project metadata from `project.db`. Errors if the folder isn't
+/// a WorldBuilder project or its format version is newer than supported.
 pub fn open_project(root: &Path) -> AppResult<Project> {
     if !root.exists() {
         return Err(AppError::PathNotFound(root.display().to_string()));
     }
 
     let paths = ProjectPaths::new(root);
-    let manifest = paths.manifest();
-    if !manifest.exists() {
+    if !paths.project_db().exists() {
         return Err(AppError::NotAProject(root.display().to_string()));
     }
 
-    let mut project: Project = json_io::read_json(&manifest)?;
-    if project.format_version > FORMAT_VERSION {
+    let conn = project_db::open_or_create(&paths.project_db())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT name, format_version, created_at FROM project_meta WHERE id = 1",
+    )?;
+    let opt = stmt
+        .query_row([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, u32>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })
+        .optional()?;
+
+    let (name, format_version, created_at) = opt
+        .ok_or_else(|| AppError::NotAProject(root.display().to_string()))?;
+
+    if format_version > FORMAT_VERSION {
         return Err(AppError::UnsupportedFormat {
-            found: project.format_version,
+            found: format_version,
             supported: FORMAT_VERSION,
         });
     }
 
-    // Migration v1 -> v2: ensure vocab DB exists and ships with the
-    // system tags vocabulary, then bump the manifest.
-    if project.format_version < 2 {
-        let conn = vocab_db::open_or_create(&paths.vocab_db())?;
-        vocab_db::seed_system_vocabularies(&conn)?;
-        project.format_version = 2;
-        json_io::write_json(&manifest, &project)?;
-    }
-
-    Ok(project)
+    Ok(Project {
+        format_version,
+        name,
+        created_at,
+    })
 }

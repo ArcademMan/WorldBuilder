@@ -24,6 +24,11 @@ pub enum FieldType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldDef {
+    /// Stable identifier used to detect renames across saves.
+    /// Optional on the wire so the UI can omit it when adding a new field;
+    /// the backend generates a UUID in that case.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     pub key: String,
     pub label: String,
     #[serde(rename = "type")]

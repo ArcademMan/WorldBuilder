@@ -22,6 +22,8 @@ pub fn run() {
             commands::entry::delete_entry,
             commands::template::list_templates,
             commands::template::read_template,
+            commands::template::save_template,
+            commands::template::delete_template,
             commands::vocabulary::list_vocabularies,
             commands::vocabulary::list_vocabulary_items,
             commands::vocabulary::create_vocabulary,

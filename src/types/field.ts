@@ -24,6 +24,8 @@ export type FieldType =
  * keyed by `FieldDef.key`.
  */
 export type FieldDef = {
+  /** Stable identifier; omit when adding a brand-new field — backend assigns one. */
+  id?: string;
   key: string;
   label: string;
   type: FieldType;

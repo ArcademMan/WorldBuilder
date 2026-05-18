@@ -2,12 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-pub const PROJECT_MANIFEST: &str = "worldbuilder.json";
-pub const TEMPLATES_DIR: &str = "templates";
-pub const ENTRIES_DIR: &str = "entries";
+pub const PROJECT_DB_FILE: &str = "project.db";
 pub const ASSETS_DIR: &str = "assets";
 pub const IMAGES_DIR: &str = "images";
-pub const VOCAB_DB_FILE: &str = "vocabularies.db";
 
 /// Resolves all known paths under a given project root.
 pub struct ProjectPaths {
@@ -23,31 +20,11 @@ impl ProjectPaths {
         &self.root
     }
 
-    pub fn manifest(&self) -> PathBuf {
-        self.root.join(PROJECT_MANIFEST)
-    }
-
-    pub fn templates_dir(&self) -> PathBuf {
-        self.root.join(TEMPLATES_DIR)
-    }
-
-    pub fn entries_dir(&self) -> PathBuf {
-        self.root.join(ENTRIES_DIR)
+    pub fn project_db(&self) -> PathBuf {
+        self.root.join(PROJECT_DB_FILE)
     }
 
     pub fn images_dir(&self) -> PathBuf {
         self.root.join(ASSETS_DIR).join(IMAGES_DIR)
-    }
-
-    pub fn template_file(&self, id: &str) -> PathBuf {
-        self.templates_dir().join(format!("{id}.json"))
-    }
-
-    pub fn entry_file(&self, id: &str) -> PathBuf {
-        self.entries_dir().join(format!("{id}.json"))
-    }
-
-    pub fn vocab_db(&self) -> PathBuf {
-        self.root.join(VOCAB_DB_FILE)
     }
 }

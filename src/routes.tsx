@@ -4,6 +4,8 @@ import { EntryEditorPage } from "./features/entry-editor/EntryEditorPage";
 import { ProjectPickerPage } from "./features/project-picker/ProjectPickerPage";
 import { ProjectEmptyState } from "./features/project-shell/components/ProjectEmptyState";
 import { ProjectShellPage } from "./features/project-shell/ProjectShellPage";
+import { ProjectTemplatesPage } from "./features/templates/ProjectTemplatesPage";
+import { TemplateEditorPage } from "./features/templates/TemplateEditorPage";
 import { ProjectVocabulariesPage } from "./features/vocabularies/ProjectVocabulariesPage";
 
 /**
@@ -19,6 +21,8 @@ export const router = createHashRouter([
     children: [
       { index: true, element: <ProjectEmptyState /> },
       { path: "entry/:id", element: <EntryEditorPage /> },
+      { path: "templates", element: <ProjectTemplatesPage /> },
+      { path: "templates/:id", element: <TemplateEditorPage /> },
       { path: "vocabularies", element: <ProjectVocabulariesPage /> },
     ],
   },
