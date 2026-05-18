@@ -7,6 +7,7 @@ pub const TEMPLATES_DIR: &str = "templates";
 pub const ENTRIES_DIR: &str = "entries";
 pub const ASSETS_DIR: &str = "assets";
 pub const IMAGES_DIR: &str = "images";
+pub const VOCAB_DB_FILE: &str = "vocabularies.db";
 
 /// Resolves all known paths under a given project root.
 pub struct ProjectPaths {
@@ -44,5 +45,9 @@ impl ProjectPaths {
 
     pub fn entry_file(&self, id: &str) -> PathBuf {
         self.entries_dir().join(format!("{id}.json"))
+    }
+
+    pub fn vocab_db(&self) -> PathBuf {
+        self.root.join(VOCAB_DB_FILE)
     }
 }

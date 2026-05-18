@@ -1,38 +1,39 @@
-import { Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 import { useCurrentProject } from "../../hooks/use-current-project";
 
+import { EntriesProvider } from "./entries-context";
+import { ProjectEmptyState } from "./components/ProjectEmptyState";
+import { ProjectSidebar } from "./components/ProjectSidebar";
+import { TemplatesProvider } from "./templates-context";
+import { VocabulariesProvider } from "./vocabularies-context";
+import styles from "./ProjectShellPage.module.css";
+
 /**
- * Stub shell shown after a project is opened. Phase 2 turns this into
- * the real layout (sidebar + entry editor + graph view).
+ * Two-pane layout shown after a project is opened. Entries and
+ * templates are loaded once here and shared with every child route
+ * via context, so the sidebar list and the editor stay in sync after
+ * any mutation.
  */
 export function ProjectShellPage() {
   const { project } = useCurrentProject();
 
   if (!project) {
-    return (
-      <main style={{ padding: "var(--space-8)" }}>
-        <p>No project is open.</p>
-        <Link to="/">← Back to project picker</Link>
-      </main>
-    );
+    return <ProjectEmptyState message="No project is open." showBackLink />;
   }
 
   return (
-    <main style={{ padding: "var(--space-8)", maxWidth: 820, margin: "0 auto" }}>
-      <h1>{project.meta.name}</h1>
-      <p style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", fontSize: "0.85rem" }}>
-        {project.path}
-      </p>
-      <dl style={{ marginTop: "var(--space-6)" }}>
-        <dt style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>Format version</dt>
-        <dd style={{ margin: "0 0 var(--space-3) 0" }}>{project.meta.formatVersion}</dd>
-        <dt style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>Created</dt>
-        <dd style={{ margin: 0 }}>{project.meta.createdAt}</dd>
-      </dl>
-      <p style={{ marginTop: "var(--space-8)" }}>
-        <Link to="/">← Back to project picker</Link>
-      </p>
-    </main>
+    <EntriesProvider projectPath={project.path}>
+      <TemplatesProvider projectPath={project.path}>
+        <VocabulariesProvider projectPath={project.path}>
+          <div className={styles.shell}>
+            <ProjectSidebar projectName={project.meta.name} />
+            <main className={styles.main}>
+              <Outlet />
+            </main>
+          </div>
+        </VocabulariesProvider>
+      </TemplatesProvider>
+    </EntriesProvider>
   );
 }

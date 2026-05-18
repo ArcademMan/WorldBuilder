@@ -6,14 +6,14 @@ use std::fs;
 use std::path::Path;
 
 use tauri::AppHandle;
-use time::format_description::well_known::Iso8601;
-use time::OffsetDateTime;
 
 use crate::domain::project::{Project, FORMAT_VERSION};
 use crate::error::{AppError, AppResult};
 use crate::storage::json_io;
 use crate::storage::paths::ProjectPaths;
 use crate::storage::starter;
+use crate::storage::timestamp::now_iso;
+use crate::storage::vocab_db;
 
 /// Creates the folder structure for a brand-new project at `root`.
 /// Fails if `root` already contains a `worldbuilder.json` (to avoid
@@ -40,10 +40,15 @@ pub fn create_project(app: &AppHandle, root: &Path, name: &str) -> AppResult<Pro
     json_io::write_json(&paths.manifest(), &project)?;
     starter::copy_starter_templates(app, &paths)?;
 
+    // Initialize the vocabularies DB with the system tags vocab.
+    let conn = vocab_db::open_or_create(&paths.vocab_db())?;
+    vocab_db::seed_system_vocabularies(&conn)?;
+
     Ok(project)
 }
 
-/// Reads and validates the manifest of an existing project.
+/// Reads and validates the manifest of an existing project, running
+/// any necessary auto-migrations along the way.
 pub fn open_project(root: &Path) -> AppResult<Project> {
     if !root.exists() {
         return Err(AppError::PathNotFound(root.display().to_string()));
@@ -55,18 +60,22 @@ pub fn open_project(root: &Path) -> AppResult<Project> {
         return Err(AppError::NotAProject(root.display().to_string()));
     }
 
-    let project: Project = json_io::read_json(&manifest)?;
+    let mut project: Project = json_io::read_json(&manifest)?;
     if project.format_version > FORMAT_VERSION {
         return Err(AppError::UnsupportedFormat {
             found: project.format_version,
             supported: FORMAT_VERSION,
         });
     }
-    Ok(project)
-}
 
-pub fn now_iso() -> String {
-    OffsetDateTime::now_utc()
-        .format(&Iso8601::DEFAULT)
-        .unwrap_or_else(|_| String::from("1970-01-01T00:00:00.000000000Z"))
+    // Migration v1 -> v2: ensure vocab DB exists and ships with the
+    // system tags vocabulary, then bump the manifest.
+    if project.format_version < 2 {
+        let conn = vocab_db::open_or_create(&paths.vocab_db())?;
+        vocab_db::seed_system_vocabularies(&conn)?;
+        project.format_version = 2;
+        json_io::write_json(&manifest, &project)?;
+    }
+
+    Ok(project)
 }

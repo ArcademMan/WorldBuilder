@@ -14,7 +14,9 @@ export type FieldType =
   | "image"
   | "imageList"
   | "ref"
-  | "refList";
+  | "refList"
+  | "vocab"
+  | "vocabList";
 
 /**
  * Definition of a single field in a template's infobox.
@@ -29,6 +31,8 @@ export type FieldDef = {
   helpText?: string;
   /** For `ref` / `refList`: restrict to entries of these template ids. Empty/undefined = any. */
   refTemplateIds?: string[];
+  /** For `vocab` / `vocabList`: id of the backing vocabulary (e.g. "tags"). */
+  vocabularyId?: string;
 };
 
 /**

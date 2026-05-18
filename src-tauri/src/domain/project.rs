@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// On-disk JSON format version. Must mirror `FORMAT_VERSION` in
 /// `src/constants/format.ts`.
-pub const FORMAT_VERSION: u32 = 1;
+pub const FORMAT_VERSION: u32 = 2;
 
 /// Mirror of the TS `Project` type — content of `<project>/worldbuilder.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]

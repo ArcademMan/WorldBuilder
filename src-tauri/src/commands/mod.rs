@@ -2,5 +2,8 @@
 //! inputs, delegates to a `storage::` function, and returns an
 //! `AppResult` — keeping IO/policy out of the bridge layer.
 
+pub mod entry;
 pub mod project;
 pub mod recents;
+pub mod template;
+pub mod vocabulary;

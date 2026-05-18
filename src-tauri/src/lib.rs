@@ -15,6 +15,20 @@ pub fn run() {
             commands::recents::list_recent_projects,
             commands::recents::add_recent_project,
             commands::recents::remove_recent_project,
+            commands::entry::create_entry,
+            commands::entry::list_entries,
+            commands::entry::read_entry,
+            commands::entry::save_entry,
+            commands::entry::delete_entry,
+            commands::template::list_templates,
+            commands::template::read_template,
+            commands::vocabulary::list_vocabularies,
+            commands::vocabulary::list_vocabulary_items,
+            commands::vocabulary::create_vocabulary,
+            commands::vocabulary::create_vocabulary_item,
+            commands::vocabulary::rename_vocabulary_item,
+            commands::vocabulary::delete_vocabulary_item,
+            commands::vocabulary::delete_vocabulary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

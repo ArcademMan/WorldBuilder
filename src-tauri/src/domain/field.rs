@@ -16,6 +16,8 @@ pub enum FieldType {
     ImageList,
     Ref,
     RefList,
+    Vocab,
+    VocabList,
 }
 
 /// Mirror of the TS `FieldDef` type.
@@ -32,4 +34,6 @@ pub struct FieldDef {
     pub help_text: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ref_template_ids: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vocabulary_id: Option<String>,
 }

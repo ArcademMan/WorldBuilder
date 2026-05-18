@@ -19,6 +19,9 @@ pub enum AppError {
     #[error("Store error: {0}")]
     Store(#[from] tauri_plugin_store::Error),
 
+    #[error("Database error: {0}")]
+    Db(#[from] rusqlite::Error),
+
     #[error("Path does not exist: {0}")]
     PathNotFound(String),
 

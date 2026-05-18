@@ -5,3 +5,4 @@ pub mod entry;
 pub mod field;
 pub mod project;
 pub mod template;
+pub mod vocabulary;
