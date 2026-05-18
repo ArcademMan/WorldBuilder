@@ -1,0 +1,97 @@
+# ---------- Dependencies ----------
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ---------- Build output ----------
+dist/
+dist-ssr/
+build/
+out/
+.vite/
+*.tsbuildinfo
+
+# ---------- Tauri / Rust ----------
+# (src-tauri/ ha il suo .gitignore per /target e /gen/schemas)
+# Bundle prodotti dal build di Tauri, in caso vengano copiati altrove:
+*.app
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.exe
+!**/icons/**/*.ico
+!**/icons/**/*.exe.manifest
+
+# ---------- Environment / secrets ----------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
+*.key
+
+# ---------- Logs ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Test / coverage ----------
+coverage/
+.nyc_output/
+*.lcov
+
+# ---------- Cache ----------
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.turbo/
+
+# ---------- Editor / IDE ----------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+
+# ---------- OS ----------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+# Linux
+*~
+.directory
+.Trash-*
+
+# ---------- Local-only ----------
+*.local
+.scratch/
+TODO.local.md
