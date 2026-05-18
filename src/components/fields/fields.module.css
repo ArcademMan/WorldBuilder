@@ -107,6 +107,15 @@
   color: var(--color-text);
 }
 
+.chipLink {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.chipLink:hover {
+  text-decoration: underline;
+}
+
 .chipNewInput {
   flex: 1;
   min-width: 80px;
@@ -182,6 +191,11 @@
 
 .suggestionCreate {
   color: var(--color-accent);
+}
+
+.suggestionMeta {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }
 
 .warning {

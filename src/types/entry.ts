@@ -23,3 +23,15 @@ export type Entry = {
   createdAt: string;
   updatedAt: string;
 };
+
+/**
+ * Single incoming reference to an entry: source entry id + which of its
+ * fields holds the link. Source name/template are denormalized so the
+ * panel can render without an extra lookup.
+ */
+export type Backlink = {
+  sourceEntryId: string;
+  sourceTemplateId: string;
+  sourceName: string;
+  fieldKey: string;
+};

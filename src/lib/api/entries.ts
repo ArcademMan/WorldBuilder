@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { Entry } from "../../types";
+import type { Backlink, Entry } from "../../types";
 
 export function createEntry(
   projectPath: string,
@@ -24,4 +24,11 @@ export function saveEntry(projectPath: string, entry: Entry): Promise<Entry> {
 
 export function deleteEntry(projectPath: string, id: string): Promise<void> {
   return invoke<void>("delete_entry", { projectPath, id });
+}
+
+export function listBacklinks(
+  projectPath: string,
+  id: string,
+): Promise<Backlink[]> {
+  return invoke<Backlink[]>("list_backlinks", { projectPath, id });
 }

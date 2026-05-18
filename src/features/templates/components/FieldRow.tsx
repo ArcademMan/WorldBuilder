@@ -1,5 +1,5 @@
 import { Button } from "../../../components/Button";
-import type { FieldDef, FieldType, Vocabulary } from "../../../types";
+import type { FieldDef, FieldType, Template, Vocabulary } from "../../../types";
 
 import styles from "../TemplateEditorPage.module.css";
 
@@ -11,10 +11,10 @@ const FIELD_TYPE_OPTIONS: Array<{ value: FieldType; label: string }> = [
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
   { value: "date", label: "Date" },
-  { value: "image", label: "Image (Phase 4)" },
-  { value: "imageList", label: "Image list (Phase 4)" },
-  { value: "ref", label: "Reference (Phase 5)" },
-  { value: "refList", label: "Reference list (Phase 5)" },
+  { value: "image", label: "Image (Phase 5)" },
+  { value: "imageList", label: "Image list (Phase 5)" },
+  { value: "ref", label: "Reference (link to entry)" },
+  { value: "refList", label: "Reference list (multiple)" },
   { value: "vocab", label: "Vocabulary" },
   { value: "vocabList", label: "Vocabulary list" },
 ];
@@ -24,6 +24,7 @@ type Props = {
   index: number;
   total: number;
   vocabularies: Vocabulary[];
+  templates: Template[];
   keyError?: string;
   onChange: (next: FieldDef) => void;
   onMoveUp: () => void;
@@ -41,6 +42,7 @@ export function FieldRow({
   index,
   total,
   vocabularies,
+  templates,
   keyError,
   onChange,
   onMoveUp,
@@ -48,13 +50,31 @@ export function FieldRow({
   onRemove,
 }: Props) {
   const needsVocab = field.type === "vocab" || field.type === "vocabList";
+  const needsRef = field.type === "ref" || field.type === "refList";
+  const selectedRefIds = new Set(field.refTemplateIds ?? []);
 
   function handleTypeChange(next: FieldType) {
     const update: FieldDef = { ...field, type: next };
     if (next !== "vocab" && next !== "vocabList") {
       delete update.vocabularyId;
     }
+    if (next !== "ref" && next !== "refList") {
+      delete update.refTemplateIds;
+    }
     onChange(update);
+  }
+
+  function toggleRefTemplate(id: string) {
+    const next = new Set(selectedRefIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    onChange({
+      ...field,
+      refTemplateIds: next.size === 0 ? undefined : Array.from(next),
+    });
   }
 
   return (
@@ -119,6 +139,33 @@ export function FieldRow({
       </div>
 
       {keyError && <p className={styles.fieldError}>{keyError}</p>}
+
+      {needsRef && (
+        <div className={styles.formField}>
+          <label className={styles.label}>
+            Target template{field.type === "refList" ? "(s)" : ""}
+          </label>
+          {templates.length === 0 ? (
+            <p className={styles.fieldError}>
+              No other templates yet — create one first to use this field type.
+            </p>
+          ) : (
+            <div className={styles.refTargets}>
+              {templates.map((t) => (
+                <label key={t.id} className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={selectedRefIds.has(t.id)}
+                    onChange={() => toggleRefTemplate(t.id)}
+                  />
+                  {t.icon ? `${t.icon} ` : ""}
+                  {t.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {needsVocab && (
         <div className={styles.formField}>

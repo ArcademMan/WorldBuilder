@@ -4,6 +4,8 @@ export * from "./FieldRenderer";
 export * from "./FormField";
 export * from "./MarkdownField";
 export * from "./NumberField";
+export * from "./RefField";
+export * from "./RefListField";
 export * from "./StringField";
 export * from "./StringListField";
 export * from "./TextField";

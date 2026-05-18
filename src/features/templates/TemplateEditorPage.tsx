@@ -57,6 +57,13 @@ function validateFields(fields: FieldDef[]): FieldErrors {
       errors[i] = "Pick a vocabulary for this field.";
       return;
     }
+    if (
+      (f.type === "ref" || f.type === "refList") &&
+      (!f.refTemplateIds || f.refTemplateIds.length === 0)
+    ) {
+      errors[i] = "Pick at least one target template for this reference.";
+      return;
+    }
   });
   return errors;
 }
@@ -64,7 +71,13 @@ function validateFields(fields: FieldDef[]): FieldErrors {
 export function TemplateEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { byId, save, remove, loading: templatesLoading } = useTemplatesContext();
+  const {
+    items: templates,
+    byId,
+    save,
+    remove,
+    loading: templatesLoading,
+  } = useTemplatesContext();
   const { vocabs } = useVocabulariesContext();
 
   const isNew = id === "new";
@@ -284,6 +297,7 @@ export function TemplateEditorPage() {
               index={i}
               total={draft.fields.length}
               vocabularies={vocabs}
+              templates={templates}
               keyError={fieldErrors[i]}
               onChange={(next) => patchField(i, next)}
               onMoveUp={() => moveField(i, -1)}

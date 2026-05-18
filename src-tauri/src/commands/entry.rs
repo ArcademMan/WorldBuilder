@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::domain::entry::Entry;
 use crate::error::AppResult;
-use crate::storage::entry_store;
+use crate::storage::entry_store::{self, Backlink};
 
 #[tauri::command]
 pub async fn create_entry(
@@ -31,4 +31,9 @@ pub async fn save_entry(project_path: String, entry: Entry) -> AppResult<Entry> 
 #[tauri::command]
 pub async fn delete_entry(project_path: String, id: String) -> AppResult<()> {
     entry_store::delete_entry(&PathBuf::from(project_path), &id)
+}
+
+#[tauri::command]
+pub async fn list_backlinks(project_path: String, id: String) -> AppResult<Vec<Backlink>> {
+    entry_store::list_backlinks(&PathBuf::from(project_path), &id)
 }

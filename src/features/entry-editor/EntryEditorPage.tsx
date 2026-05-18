@@ -3,11 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { Button } from "../../components/Button";
 import { FieldRenderer } from "../../components/fields";
+import { useCurrentProject } from "../../hooks/use-current-project";
 import { useEntriesContext } from "../project-shell/entries-context";
 import { useTemplatesContext } from "../project-shell/templates-context";
 import type { Entry, FieldDef, FieldValue } from "../../types";
 import { SYSTEM_TAGS_VOCAB_ID } from "../../types";
 
+import { BacklinksPanel } from "./BacklinksPanel";
 import styles from "./EntryEditorPage.module.css";
 
 const NAME_DEF: FieldDef = {
@@ -38,12 +40,14 @@ export function EntryEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const { project } = useCurrentProject();
   const { items, save, remove } = useEntriesContext();
   const { byId: templatesById, loading: templatesLoading } = useTemplatesContext();
 
   const [draft, setDraft] = useState<Entry | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backlinksKey, setBacklinksKey] = useState(0);
 
   // Load the draft from the list when the routed id changes, or when
   // the entry first appears in the list. Once a draft is loaded for
@@ -77,6 +81,7 @@ export function EntryEditorPage() {
     try {
       const saved = await save(draft);
       setDraft(saved);
+      setBacklinksKey((k) => k + 1);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -191,6 +196,14 @@ export function EntryEditorPage() {
       <section className={styles.section}>
         <FieldRenderer def={BODY_DEF} value={draft.body} onChange={onBody} disabled={busy} />
       </section>
+
+      {project && (
+        <BacklinksPanel
+          projectPath={project.path}
+          entryId={draft.id}
+          refreshKey={backlinksKey}
+        />
+      )}
     </form>
   );
 }

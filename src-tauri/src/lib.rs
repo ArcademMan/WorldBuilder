@@ -20,6 +20,7 @@ pub fn run() {
             commands::entry::read_entry,
             commands::entry::save_entry,
             commands::entry::delete_entry,
+            commands::entry::list_backlinks,
             commands::template::list_templates,
             commands::template::read_template,
             commands::template::save_template,

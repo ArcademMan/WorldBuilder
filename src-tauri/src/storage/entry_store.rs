@@ -1,12 +1,15 @@
-//! Entries persisted in project.db across four tables:
+//! Entries persisted in project.db across five tables:
 //! - `entries`              — one row per entry (scalar columns)
 //! - `entry_tags`           — links to the system "tags" vocabulary items
-//! - `entry_field_scalars`  — template-specific values that are NOT vocab refs,
+//! - `entry_field_scalars`  — template-specific values that are NOT refs,
 //!                            stored as `serde_json::Value` so the shape is
 //!                            flexible (strings, numbers, arrays, …)
-//! - `entry_vocab_refs`     — template-specific vocab / vocabList values, kept
-//!                            as real FK rows so CASCADE auto-purges them
-//!                            when an item is deleted.
+//! - `entry_vocab_refs`     — vocab / vocabList values, kept as real FK rows
+//!                            so CASCADE auto-purges them when an item is
+//!                            deleted.
+//! - `entry_entry_refs`     — ref / refList values (entry-to-entry links),
+//!                            CASCADE on both endpoints. Doubles as the
+//!                            backlink index.
 //!
 //! Save is a single transaction: upsert entries row, then replace-all the
 //! companion rows for the entry.
@@ -15,6 +18,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::Serialize;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -24,6 +28,18 @@ use crate::error::{AppError, AppResult};
 use crate::storage::paths::ProjectPaths;
 use crate::storage::project_db;
 use crate::storage::timestamp::now_iso;
+
+/// One incoming reference to an entry: another entry's id + which of its
+/// fields holds the link. The UI resolves the source entry / template
+/// against the in-memory lists to render names and field labels.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backlink {
+    pub source_entry_id: String,
+    pub source_template_id: String,
+    pub source_name: String,
+    pub field_key: String,
+}
 
 // --- create / read --------------------------------------------------------
 
@@ -144,8 +160,10 @@ fn load_fields(
         map.insert(key, v);
     }
 
+    let template_field_types = load_template_field_types(conn, template_id)?;
+
     // 2) vocab refs — grouped by key, then shaped by the template's FieldType
-    let mut refs_by_key: HashMap<String, Vec<String>> = HashMap::new();
+    let mut vocab_by_key: HashMap<String, Vec<String>> = HashMap::new();
     let mut v = conn.prepare(
         "SELECT field_key, item_id FROM entry_vocab_refs
          WHERE entry_id = ?1 ORDER BY field_key, position",
@@ -154,27 +172,48 @@ fn load_fields(
         Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
     })? {
         let (key, item_id) = row?;
-        refs_by_key.entry(key).or_default().push(item_id);
+        vocab_by_key.entry(key).or_default().push(item_id);
     }
+    insert_refs_shaped(&mut map, &template_field_types, vocab_by_key, FieldType::Vocab);
 
-    let template_field_types = load_template_field_types(conn, template_id)?;
-    for (key, items) in refs_by_key {
-        let ft = template_field_types.get(&key);
-        match ft {
-            Some(FieldType::Vocab) => {
-                if let Some(first) = items.into_iter().next() {
-                    map.insert(key, Value::String(first));
-                }
-            }
-            // Default to list-shape for VocabList or anything unknown
-            _ => {
-                let arr = items.into_iter().map(Value::String).collect();
-                map.insert(key, Value::Array(arr));
-            }
-        }
+    // 3) entry-to-entry refs — same shape logic, keyed by Ref vs RefList
+    let mut entry_refs_by_key: HashMap<String, Vec<String>> = HashMap::new();
+    let mut e = conn.prepare(
+        "SELECT field_key, target_id FROM entry_entry_refs
+         WHERE entry_id = ?1 ORDER BY field_key, position",
+    )?;
+    for row in e.query_map(params![entry_id], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    })? {
+        let (key, target_id) = row?;
+        entry_refs_by_key.entry(key).or_default().push(target_id);
     }
+    insert_refs_shaped(&mut map, &template_field_types, entry_refs_by_key, FieldType::Ref);
 
     Ok(map)
+}
+
+/// Shapes the multi-row representation of a ref-like field back into a single
+/// JSON value: scalar string when the template says it's the singular variant,
+/// array of strings otherwise. `singular_marker` selects the singular variant
+/// (Vocab vs Ref) — anything else is treated as a list.
+fn insert_refs_shaped(
+    map: &mut HashMap<String, Value>,
+    types: &HashMap<String, FieldType>,
+    refs: HashMap<String, Vec<String>>,
+    singular_marker: FieldType,
+) {
+    for (key, items) in refs {
+        let is_singular = types.get(&key) == Some(&singular_marker);
+        if is_singular {
+            if let Some(first) = items.into_iter().next() {
+                map.insert(key, Value::String(first));
+            }
+        } else {
+            let arr = items.into_iter().map(Value::String).collect();
+            map.insert(key, Value::Array(arr));
+        }
+    }
 }
 
 fn load_template_field_types(
@@ -242,13 +281,17 @@ pub fn save_entry(root: &Path, entry: Entry) -> AppResult<Entry> {
         )?;
     }
 
-    // Replace field values (split scalars vs vocab refs).
+    // Replace field values (split scalars vs vocab refs vs entry refs).
     tx.execute(
         "DELETE FROM entry_field_scalars WHERE entry_id = ?1",
         params![entry.id],
     )?;
     tx.execute(
         "DELETE FROM entry_vocab_refs WHERE entry_id = ?1",
+        params![entry.id],
+    )?;
+    tx.execute(
+        "DELETE FROM entry_entry_refs WHERE entry_id = ?1",
         params![entry.id],
     )?;
     for (key, value) in entry.fields.iter() {
@@ -272,8 +315,26 @@ pub fn save_entry(root: &Path, entry: Entry) -> AppResult<Entry> {
                     }
                 }
             }
-            // Everything else — including vocab fields with null/wrong shape,
-            // and unknown field keys — goes into scalars as JSON.
+            (Some(FieldType::Ref), Value::String(target_id)) => {
+                tx.execute(
+                    "INSERT INTO entry_entry_refs (entry_id, field_key, target_id, position)
+                     VALUES (?1, ?2, ?3, 0)",
+                    params![entry.id, key, target_id],
+                )?;
+            }
+            (Some(FieldType::RefList), Value::Array(items)) => {
+                for (pos, v) in items.iter().enumerate() {
+                    if let Value::String(target_id) = v {
+                        tx.execute(
+                            "INSERT INTO entry_entry_refs (entry_id, field_key, target_id, position)
+                             VALUES (?1, ?2, ?3, ?4)",
+                            params![entry.id, key, target_id, pos as i64],
+                        )?;
+                    }
+                }
+            }
+            // Everything else — including ref/vocab fields with null/wrong
+            // shape, and unknown field keys — goes into scalars as JSON.
             _ => {
                 let json = serde_json::to_string(value)?;
                 tx.execute(
@@ -288,6 +349,31 @@ pub fn save_entry(root: &Path, entry: Entry) -> AppResult<Entry> {
     tx.commit()?;
     drop(conn);
     read_entry(root, &entry.id)
+}
+
+/// All incoming references to `id`, sorted by source name. Powers the
+/// "Linked from" panel in the entry editor.
+pub fn list_backlinks(root: &Path, id: &str) -> AppResult<Vec<Backlink>> {
+    let paths = ProjectPaths::new(root);
+    let conn = project_db::open_or_create(&paths.project_db())?;
+    let mut stmt = conn.prepare(
+        "SELECT r.entry_id, r.field_key, e.template_id, e.name
+         FROM entry_entry_refs r
+         JOIN entries e ON e.id = r.entry_id
+         WHERE r.target_id = ?1
+         ORDER BY e.name COLLATE NOCASE, r.field_key",
+    )?;
+    let rows = stmt
+        .query_map(params![id], |r| {
+            Ok(Backlink {
+                source_entry_id: r.get::<_, String>(0)?,
+                field_key: r.get::<_, String>(1)?,
+                source_template_id: r.get::<_, String>(2)?,
+                source_name: r.get::<_, String>(3)?,
+            })
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(rows)
 }
 
 pub fn delete_entry(root: &Path, id: &str) -> AppResult<()> {

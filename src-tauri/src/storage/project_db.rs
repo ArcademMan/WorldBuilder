@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS entry_vocab_refs (
     PRIMARY KEY (entry_id, field_key, position)
 );
 
+-- Entry-to-entry references (ref / refList fields). CASCADE on both sides
+-- keeps the table consistent: deleting either endpoint drops the link, so
+-- backlink queries never see dangling rows.
+CREATE TABLE IF NOT EXISTS entry_entry_refs (
+    entry_id  TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+    field_key TEXT NOT NULL,
+    target_id TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+    position  INTEGER NOT NULL,
+    PRIMARY KEY (entry_id, field_key, position)
+);
+
 -- Indexes that pay back the most common queries.
 CREATE        INDEX IF NOT EXISTS idx_items_vocab           ON vocabulary_items(vocabulary_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_label    ON vocabulary_items(vocabulary_id, label);
@@ -108,6 +119,7 @@ CREATE        INDEX IF NOT EXISTS idx_template_fields_tpl   ON template_fields(t
 CREATE        INDEX IF NOT EXISTS idx_entries_template      ON entries(template_id);
 CREATE        INDEX IF NOT EXISTS idx_entry_tags_item       ON entry_tags(item_id);
 CREATE        INDEX IF NOT EXISTS idx_entry_vocab_refs_item ON entry_vocab_refs(item_id);
+CREATE        INDEX IF NOT EXISTS idx_entry_refs_target     ON entry_entry_refs(target_id);
 ";
 
 /// Opens (creates if missing) the project DB and applies the schema.

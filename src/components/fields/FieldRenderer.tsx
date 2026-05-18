@@ -4,6 +4,8 @@ import { BooleanField } from "./BooleanField";
 import { DateField } from "./DateField";
 import { MarkdownField } from "./MarkdownField";
 import { NumberField } from "./NumberField";
+import { RefField } from "./RefField";
+import { RefListField } from "./RefListField";
 import { StringField } from "./StringField";
 import { StringListField } from "./StringListField";
 import { TextField } from "./TextField";
@@ -106,10 +108,26 @@ export function FieldRenderer({ def, value, onChange, disabled }: Props) {
           disabled={disabled}
         />
       );
+    case "ref":
+      return (
+        <RefField
+          def={def}
+          value={asString(value)}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "refList":
+      return (
+        <RefListField
+          def={def}
+          value={asStringList(value)}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
     case "image":
     case "imageList":
-    case "ref":
-    case "refList":
       return <UnsupportedField def={def} />;
   }
 }
