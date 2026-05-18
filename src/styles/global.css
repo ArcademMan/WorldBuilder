@@ -1,0 +1,89 @@
+/* ---------- design tokens ---------- */
+:root {
+  --font-sans: Inter, "Segoe UI", Avenir, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+
+  --color-bg: #f6f6f6;
+  --color-bg-elevated: #ffffff;
+  --color-border: #e2e2e2;
+  --color-text: #0f0f0f;
+  --color-text-muted: #6b6b6b;
+  --color-accent: #396cd8;
+  --color-accent-hover: #2a55b3;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1a1a;
+    --color-bg-elevated: #242424;
+    --color-border: #333333;
+    --color-text: #f6f6f6;
+    --color-text-muted: #9a9a9a;
+    --color-accent: #5a8eff;
+    --color-accent-hover: #7aa5ff;
+  }
+}
+
+/* ---------- minimal reset ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
