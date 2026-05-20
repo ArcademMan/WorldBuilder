@@ -15,6 +15,9 @@ pub fn run() {
             commands::recents::list_recent_projects,
             commands::recents::add_recent_project,
             commands::recents::remove_recent_project,
+            commands::session::get_active_project_path,
+            commands::session::set_active_project_path,
+            commands::session::clear_active_project_path,
             commands::entry::create_entry,
             commands::entry::list_entries,
             commands::entry::read_entry,
@@ -35,6 +38,8 @@ pub fn run() {
             commands::vocabulary::rename_vocabulary_item,
             commands::vocabulary::delete_vocabulary_item,
             commands::vocabulary::delete_vocabulary,
+            commands::export::write_text_file,
+            commands::export::write_text_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

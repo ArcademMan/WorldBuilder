@@ -19,6 +19,7 @@
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
 
@@ -35,17 +36,8 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1a1a1a;
-    --color-bg-elevated: #242424;
-    --color-border: #333333;
-    --color-text: #f6f6f6;
-    --color-text-muted: #9a9a9a;
-    --color-accent: #5a8eff;
-    --color-accent-hover: #7aa5ff;
-  }
-}
+/* Active theme tokens are applied to :root at runtime by ThemeProvider.
+   See src/lib/themes.ts and src/hooks/use-theme.tsx. */
 
 /* ---------- minimal reset ---------- */
 *,
@@ -86,4 +78,36 @@ button {
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
+}
+
+/* ---------- scrollbars (themed) ---------- */
+/* Chromium / WebKit (covers Windows WebView2, macOS WKWebView, Linux WebKitGTK) */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox fallback (uses the same accent palette) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }

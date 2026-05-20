@@ -1,4 +1,5 @@
 import type { FieldDef } from "./field";
+import type { LayoutSection } from "./layout";
 
 /**
  * A user-editable template that defines the infobox fields for an entry type.
@@ -15,4 +16,7 @@ export type Template = {
   /** Emoji or icon identifier displayed next to entries of this template. */
   icon?: string;
   fields: FieldDef[];
+  /** Optional infobox layout. Fields not referenced fall through to a
+   * trailing block so adding a field never makes it disappear. */
+  layout: LayoutSection[];
 };

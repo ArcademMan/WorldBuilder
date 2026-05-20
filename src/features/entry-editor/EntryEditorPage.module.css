@@ -25,8 +25,11 @@
 .badge,
 .badgeMuted,
 .badgeError {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.85rem;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 999px;
   align-self: flex-start;
 }

@@ -5,6 +5,10 @@
   font-size: 0.9rem;
 }
 
+.fieldBare {
+  display: contents;
+}
+
 .label {
   font-weight: 500;
   color: var(--color-text);
@@ -17,6 +21,9 @@
 
 .input,
 .textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   font-family: inherit;
   font-size: 0.95rem;
   padding: var(--space-2);
@@ -39,6 +46,11 @@
 
 .textareaLarge {
   min-height: 200px;
+}
+
+.textareaAutoGrow {
+  resize: none;
+  overflow: hidden;
 }
 
 .helpText {

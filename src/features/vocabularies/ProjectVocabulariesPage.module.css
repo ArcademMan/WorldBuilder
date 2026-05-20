@@ -9,29 +9,22 @@
 
 .header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.backLink {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.backLink:hover {
-  color: var(--color-accent);
-}
-
-.headerRow {
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
 .title {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 700;
   margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.newButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .layout {
@@ -134,5 +127,27 @@
 
 .empty {
   color: var(--color-text-muted);
+  margin: 0;
+}
+
+.modalInput {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  width: 100%;
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.modalError {
+  color: #b3261e;
+  font-size: 0.85rem;
   margin: 0;
 }

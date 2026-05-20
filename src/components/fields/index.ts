@@ -1,7 +1,7 @@
 export * from "./BooleanField";
 export * from "./DateField";
 export * from "./FieldRenderer";
-export * from "./FormField";
+export { BareFieldProvider, FormField } from "./FormField";
 export * from "./ImageField";
 export * from "./ImageListField";
 export * from "./MarkdownField";

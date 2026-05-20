@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import * as api from "../../lib/api";
@@ -10,7 +11,12 @@ import styles from "./ProjectPickerPage.module.css";
 
 export function ProjectPickerPage() {
   const navigate = useNavigate();
-  const { setProject } = useCurrentProject();
+  const { project, loading, setProject } = useCurrentProject();
+
+  // If a project was auto-restored, jump straight into it.
+  useEffect(() => {
+    if (!loading && project) navigate("/project", { replace: true });
+  }, [loading, project, navigate]);
 
   async function enterProject(path: string, meta: Awaited<ReturnType<typeof api.openProject>>) {
     setProject({ path, meta });
@@ -34,9 +40,11 @@ export function ProjectPickerPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <h1>WorldBuilder</h1>
-        <p className={styles.subtitle}>Build your world. One entry at a time.</p>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Get started</h1>
+        <p className={styles.pageSubtitle}>
+          Create a new world or open an existing project to continue.
+        </p>
       </header>
 
       <section className={styles.actions}>
@@ -44,8 +52,8 @@ export function ProjectPickerPage() {
         <OpenProjectCard onOpen={handleOpen} />
       </section>
 
-      <section>
-        <h2 className={styles.recentsHeading}>Recent</h2>
+      <section className={styles.recentsSection}>
+        <h2 className={styles.recentsHeading}>Recent projects</h2>
         <RecentsList onOpen={handleOpen} />
       </section>
     </main>

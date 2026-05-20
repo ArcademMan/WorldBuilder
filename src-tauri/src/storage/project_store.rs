@@ -43,7 +43,7 @@ pub fn create_project(_app: &AppHandle, root: &Path, name: &str) -> AppResult<Pr
         project_db::seed_system_vocabularies(&conn)?;
     }
 
-    starter_templates::seed_starter_templates(root)?;
+    starter_templates::seed_starter_content(root)?;
 
     Ok(Project {
         format_version: FORMAT_VERSION,

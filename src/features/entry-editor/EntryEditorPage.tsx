@@ -2,13 +2,19 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Button } from "../../components/Button";
+import { TemplateIcon } from "../../components/TemplateIcon";
 import { FieldRenderer } from "../../components/fields";
+import { isCommonFieldKey } from "../../constants/common-fields";
 import { useCurrentProject } from "../../hooks/use-current-project";
+import { useEntryViewMode } from "../../hooks/use-entry-view-mode";
+import { useDraftsContext } from "../project-shell/drafts-context";
 import { useEntriesContext } from "../project-shell/entries-context";
 import { useTemplatesContext } from "../project-shell/templates-context";
 import type { Entry, FieldDef, FieldValue } from "../../types";
 
 import { BacklinksPanel } from "./BacklinksPanel";
+import { EntryReadView } from "./EntryReadView";
+import { ViewModeToggle } from "./ViewModeToggle";
 import styles from "./EntryEditorPage.module.css";
 
 const NAME_DEF: FieldDef = {
@@ -30,22 +36,58 @@ export function EntryEditorPage() {
   const { project } = useCurrentProject();
   const { items, save, remove } = useEntriesContext();
   const { byId: templatesById, loading: templatesLoading } = useTemplatesContext();
+  const { mode } = useEntryViewMode();
+  const { get: getDraft, set: setDraftPersist, clear: clearDraft } =
+    useDraftsContext();
 
   const [draft, setDraft] = useState<Entry | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [backlinksKey, setBacklinksKey] = useState(0);
 
-  // Load the draft from the list when the routed id changes, or when
-  // the entry first appears in the list. Once a draft is loaded for
-  // this id, don't overwrite it on subsequent list refreshes — that
-  // would clobber the user's in-progress edits.
+  // Load the draft when the routed id changes. Prefer an in-flight
+  // draft from the DraftsProvider (survives tab switches) over the
+  // server-backed entry. Once a draft is loaded for this id, do not
+  // overwrite it on subsequent list refreshes — that would clobber
+  // the user's in-progress edits.
   useEffect(() => {
     if (!id) return;
     if (draft?.id === id) return;
+    const pending = getDraft(id);
+    if (pending) {
+      setDraft(pending);
+      return;
+    }
     const entry = items.find((e) => e.id === id);
     if (entry) setDraft(entry);
-  }, [id, items, draft?.id]);
+  }, [id, items, draft?.id, getDraft]);
+
+  // Mirror every draft mutation into the shared DraftsProvider so the
+  // working copy survives navigation away from this page.
+  useEffect(() => {
+    if (!id || !draft || draft.id !== id) return;
+    setDraftPersist(id, draft);
+  }, [id, draft, setDraftPersist]);
+
+  // Ctrl/Cmd+S → force-save the current draft. Inline edits already
+  // commit on blur, but this gives users an explicit save reflex.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        // Blur the active field so its onChange has flushed into draft,
+        // then trigger the save.
+        const active = document.activeElement;
+        if (active instanceof HTMLElement) active.blur();
+        void commit();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // commit closes over `draft` via the latest render, so we re-bind
+    // whenever the draft identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
 
   if (!id) {
     return <p className={styles.empty}>No entry selected.</p>;
@@ -67,6 +109,7 @@ export function EntryEditorPage() {
     setError(null);
     try {
       const saved = await save(draft);
+      clearDraft(saved.id);
       setDraft(saved);
       setBacklinksKey((k) => k + 1);
     } catch (e) {
@@ -85,6 +128,7 @@ export function EntryEditorPage() {
     setError(null);
     try {
       await remove(draft.id);
+      clearDraft(draft.id);
       navigate("/project");
     } catch (e) {
       setError(String(e));
@@ -99,6 +143,19 @@ export function EntryEditorPage() {
   function setFieldValue(key: string, value: FieldValue | null) {
     setDraft((d) => {
       if (!d) return d;
+      // Common (built-in) keys map onto top-level Entry properties,
+      // not the `fields` map.
+      if (isCommonFieldKey(key)) {
+        switch (key) {
+          case "name":
+          case "summary":
+          case "body":
+            return { ...d, [key]: typeof value === "string" ? value : "" };
+          case "tags":
+          case "images":
+            return { ...d, [key]: Array.isArray(value) ? value : [] };
+        }
+      }
       const fields = { ...d.fields };
       if (value === null || value === undefined) {
         delete fields[key];
@@ -114,13 +171,44 @@ export function EntryEditorPage() {
   const onBody = (v: FieldValue | null) =>
     patch({ body: typeof v === "string" ? v : "" });
 
+  async function commit() {
+    if (!draft) return;
+    if (!draft.name.trim()) return; // skip when name is empty (would fail validation)
+    try {
+      const saved = await save(draft);
+      clearDraft(saved.id);
+      setDraft(saved);
+      setBacklinksKey((k) => k + 1);
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  if (mode === "view") {
+    return (
+      <>
+        <EntryReadView
+          entry={draft}
+          template={template}
+          refreshKey={backlinksKey}
+          onChangeField={setFieldValue}
+          onChangeName={(v) => patch({ name: v })}
+          onChangeBody={(v) => patch({ body: v })}
+          onCommit={() => void commit()}
+        />
+        <ViewModeToggle />
+      </>
+    );
+  }
+
   return (
+    <>
     <form className={styles.editor} onSubmit={handleSave}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           {template ? (
             <span className={styles.badge}>
-              {template.icon ? `${template.icon} ` : ""}
+              {template.icon && <TemplateIcon icon={template.icon} size={14} />}
               {template.name}
             </span>
           ) : templatesLoading ? (
@@ -156,13 +244,12 @@ export function EntryEditorPage() {
 
       {template && template.fields.length > 0 && (
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Infobox</h3>
-          {template.fields.map((def) => (
+          {template.fields.map((f) => (
             <FieldRenderer
-              key={def.key}
-              def={def}
-              value={draft.fields[def.key]}
-              onChange={(v) => setFieldValue(def.key, v)}
+              key={f.key}
+              def={f}
+              value={draft.fields[f.key]}
+              onChange={(v) => setFieldValue(f.key, v)}
               disabled={busy}
             />
           ))}
@@ -181,5 +268,7 @@ export function EntryEditorPage() {
         />
       )}
     </form>
+    <ViewModeToggle />
+    </>
   );
 }

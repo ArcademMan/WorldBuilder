@@ -1,0 +1,28 @@
+.readTrigger {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border: 1px dashed transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: text;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+
+.readTrigger:hover {
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+.readTrigger:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.editWrapper {
+  display: block;
+}

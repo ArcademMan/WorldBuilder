@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { LayoutGrid, List, Plus, Save, Trash2 } from "lucide-react";
 
 import { Button } from "../../components/Button";
 import { useTemplatesContext } from "../project-shell/templates-context";
@@ -7,6 +8,8 @@ import { useVocabulariesContext } from "../project-shell/vocabularies-context";
 import type { FieldDef, Template } from "../../types";
 
 import { FieldRow } from "./components/FieldRow";
+import { IconPicker } from "./components/IconPicker";
+import { LayoutEditor } from "./components/LayoutEditor";
 import styles from "./TemplateEditorPage.module.css";
 
 const KEY_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
@@ -21,12 +24,34 @@ function blankField(): FieldDef {
   return { key: "", label: "", type: "string" };
 }
 
+function slugifyKey(label: string): string {
+  const base = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (!base) return "";
+  if (/^[0-9]/.test(base)) return `f_${base}`;
+  return base;
+}
+
+function uniqueKey(base: string, taken: Set<string>): string {
+  if (!base) return "";
+  let candidate = base;
+  let n = 2;
+  while (taken.has(candidate) || RESERVED_KEYS.has(candidate)) {
+    candidate = `${base}_${n++}`;
+  }
+  return candidate;
+}
+
 function blankTemplate(): Template {
   return {
     id: crypto.randomUUID(),
     name: "",
     icon: "",
     fields: [],
+    layout: [],
   };
 }
 
@@ -40,9 +65,13 @@ function validateFields(fields: FieldDef[]): FieldErrors {
   const errors: FieldErrors = {};
   const seen = new Map<string, number>();
   fields.forEach((f, i) => {
+    if (!f.label.trim()) {
+      errors[i] = "Label is required.";
+      return;
+    }
     const key = f.key.trim();
     if (!key) {
-      errors[i] = "Key is required.";
+      errors[i] = "Label produces an empty key — use at least one letter or digit.";
       return;
     }
     if (!KEY_REGEX.test(key)) {
@@ -59,10 +88,6 @@ function validateFields(fields: FieldDef[]): FieldErrors {
       return;
     }
     seen.set(key, i);
-    if (!f.label.trim()) {
-      errors[i] = "Label is required.";
-      return;
-    }
     if ((f.type === "vocab" || f.type === "vocabList") && !f.vocabularyId) {
       errors[i] = "Pick a vocabulary for this field.";
       return;
@@ -98,6 +123,7 @@ export function TemplateEditorPage() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"fields" | "layout">("fields");
 
   // Seed the draft once the source template is available.
   useEffect(() => {
@@ -129,11 +155,6 @@ export function TemplateEditorPage() {
     if (!isNew) {
       return (
         <main className={styles.page}>
-          <p>
-            <Link to="/project/templates" className={styles.backLink}>
-              ← Back to templates
-            </Link>
-          </p>
           <p className={styles.empty}>Template not found.</p>
         </main>
       );
@@ -149,7 +170,17 @@ export function TemplateEditorPage() {
     setDraft((d) => {
       if (!d) return d;
       const fields = d.fields.slice();
-      fields[index] = next;
+      // Derive the key from the label for new fields (no persisted id yet).
+      // Existing fields keep their frozen key so saved entries don't break.
+      let resolved = next;
+      if (!next.id) {
+        const taken = new Set<string>();
+        fields.forEach((f, i) => {
+          if (i !== index && f.key) taken.add(f.key);
+        });
+        resolved = { ...next, key: uniqueKey(slugifyKey(next.label), taken) };
+      }
+      fields[index] = resolved;
       return { ...d, fields };
     });
   }
@@ -232,91 +263,169 @@ export function TemplateEditorPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link to="/project/templates" className={styles.backLink}>
-          ← Back to templates
-        </Link>
-        <div className={styles.headerRow}>
+        <div className={styles.headerLeft}>
+          <span className={styles.eyebrow}>
+            {isNew ? "Creating" : "Editing template"}
+          </span>
           <h1 className={styles.title}>
-            {isNew ? "New template" : `Edit: ${existing?.name ?? draft.name}`}
+            {isNew ? "New template" : existing?.name ?? draft.name}
           </h1>
-          <div className={styles.headerActions}>
-            {!isNew && (
-              <Button
-                variant="ghost"
-                disabled={deleting}
-                onClick={() => void handleDelete()}
-              >
-                {deleting ? "Deleting…" : "Delete"}
-              </Button>
-            )}
+        </div>
+        <div className={styles.headerActions}>
+          {!isNew && (
             <Button
-              variant="primary"
-              disabled={!canSave}
-              onClick={() => void handleSave()}
+              variant="ghost"
+              disabled={deleting}
+              onClick={() => void handleDelete()}
+              className={styles.iconButton}
             >
-              {saving ? "Saving…" : "Save"}
+              <Trash2 size={15} strokeWidth={1.75} />
+              <span>{deleting ? "Deleting…" : "Delete"}</span>
             </Button>
-          </div>
+          )}
+          <Button
+            variant="primary"
+            disabled={!canSave}
+            onClick={() => void handleSave()}
+            className={styles.iconButton}
+          >
+            <Save size={15} strokeWidth={2} />
+            <span>{saving ? "Saving…" : "Save"}</span>
+          </Button>
         </div>
       </header>
 
       {globalError && <p className={styles.globalError}>{globalError}</p>}
 
-      <section className={styles.metaGrid}>
-        <div className={styles.formField}>
-          <label className={styles.label}>Name</label>
-          <input
-            className={styles.input}
-            value={draft.name}
-            placeholder="e.g. Character"
-            onChange={(e) => {
-              patch({ name: e.target.value });
-              if (nameError) setNameError(null);
-            }}
-          />
-          {nameError && <p className={styles.fieldError}>{nameError}</p>}
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>Basics</h2>
         </div>
-        <div className={styles.formField}>
-          <label className={styles.label}>Icon (emoji)</label>
-          <input
-            className={styles.input}
-            value={draft.icon ?? ""}
-            placeholder="e.g. 👤"
-            onChange={(e) => patch({ icon: e.target.value })}
-          />
-        </div>
-      </section>
-
-      <section className={styles.fieldsSection}>
-        <div className={styles.fieldsHeader}>
-          <h2 className={styles.sectionTitle}>Fields</h2>
-          <Button variant="secondary" onClick={addField}>
-            + Add field
-          </Button>
-        </div>
-
-        {draft.fields.length === 0 ? (
-          <p className={styles.empty}>
-            No fields yet. Click <em>Add field</em> to start.
-          </p>
-        ) : (
-          draft.fields.map((f, i) => (
-            <FieldRow
-              key={f.id ?? `new-${i}`}
-              field={f}
-              index={i}
-              total={draft.fields.length}
-              vocabularies={vocabs}
-              templates={templates}
-              keyError={fieldErrors[i]}
-              onChange={(next) => patchField(i, next)}
-              onMoveUp={() => moveField(i, -1)}
-              onMoveDown={() => moveField(i, 1)}
-              onRemove={() => removeField(i)}
+        <div className={styles.metaGrid}>
+          <div className={styles.formField}>
+            <label className={styles.label}>Name</label>
+            <input
+              className={styles.input}
+              value={draft.name}
+              placeholder="e.g. Character"
+              onChange={(e) => {
+                patch({ name: e.target.value });
+                if (nameError) setNameError(null);
+              }}
             />
-          ))
-        )}
+            {nameError && <p className={styles.fieldError}>{nameError}</p>}
+          </div>
+          <div className={styles.formField}>
+            <label className={styles.label}>Icon</label>
+            <IconPicker
+              value={draft.icon}
+              onChange={(next) => patch({ icon: next })}
+            />
+          </div>
+        </div>
       </section>
+
+      <div className={styles.tabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "fields"}
+          className={`${styles.tab} ${activeTab === "fields" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("fields")}
+        >
+          <List size={14} strokeWidth={2} />
+          Fields
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "layout"}
+          className={`${styles.tab} ${activeTab === "layout" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("layout")}
+        >
+          <LayoutGrid size={14} strokeWidth={2} />
+          Layout
+        </button>
+      </div>
+
+      {activeTab === "fields" && (
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <h2 className={styles.cardTitle}>Fields</h2>
+              <p className={styles.cardHint}>
+                Custom data for each entry of this template.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={addField}
+              className={styles.iconButton}
+            >
+              <Plus size={15} strokeWidth={2} />
+              <span>Add field</span>
+            </Button>
+          </div>
+
+          {draft.fields.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p>No fields yet.</p>
+              <p className={styles.emptyHint}>
+                Click <em>Add field</em> to start defining what makes a {draft.name || "template"} unique.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className={styles.fieldList}>
+                {draft.fields.map((f, i) => (
+                  <FieldRow
+                    key={f.id ?? `new-${i}`}
+                    field={f}
+                    index={i}
+                    total={draft.fields.length}
+                    vocabularies={vocabs}
+                    templates={templates}
+                    keyError={fieldErrors[i]}
+                    onChange={(next) => patchField(i, next)}
+                    onMoveUp={() => moveField(i, -1)}
+                    onMoveDown={() => moveField(i, 1)}
+                    onRemove={() => removeField(i)}
+                  />
+                ))}
+              </div>
+              <div className={styles.addFieldFooter}>
+                <Button
+                  variant="secondary"
+                  onClick={addField}
+                  className={styles.iconButton}
+                >
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add field</span>
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {activeTab === "layout" && (
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <h2 className={styles.cardTitle}>Layout</h2>
+              <p className={styles.cardHint}>
+                Arrange fields in sections and columns. Unassigned fields
+                fall through to the end.
+              </p>
+            </div>
+          </div>
+          <LayoutEditor
+            fields={draft.fields}
+            layout={draft.layout}
+            onChange={(next) => patch({ layout: next })}
+          />
+        </section>
+      )}
     </main>
   );
 }

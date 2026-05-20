@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 import { Button } from "../../components/Button";
+import { TemplateIcon } from "../../components/TemplateIcon";
 import { useTemplatesContext } from "../project-shell/templates-context";
 
 import styles from "./ProjectTemplatesPage.module.css";
@@ -21,15 +23,11 @@ export function ProjectTemplatesPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link to="/project" className={styles.backLink}>
-          ← Back to project
-        </Link>
-        <div className={styles.headerRow}>
-          <h1 className={styles.title}>Templates</h1>
-          <Button variant="primary" onClick={handleNew}>
-            + New template
-          </Button>
-        </div>
+        <h1 className={styles.title}>Templates</h1>
+        <Button variant="primary" onClick={handleNew} className={styles.newButton}>
+          <Plus size={16} strokeWidth={2} />
+          <span>New template</span>
+        </Button>
       </header>
 
       {loading && <p className={styles.empty}>Loading…</p>}
@@ -42,7 +40,11 @@ export function ProjectTemplatesPage() {
           {templates.map((t) => (
             <li key={t.id} className={styles.row}>
               <div className={styles.rowMain}>
-                {t.icon && <span className={styles.icon}>{t.icon}</span>}
+                {t.icon && (
+                  <span className={styles.icon}>
+                    <TemplateIcon icon={t.icon} size={18} />
+                  </span>
+                )}
                 <Link to={`/project/templates/${t.id}`} className={styles.name}>
                   {t.name}
                 </Link>

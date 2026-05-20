@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { FolderPlus } from "lucide-react";
 
 import { Button } from "../../../components/Button";
 import * as api from "../../../lib/api";
@@ -45,8 +46,11 @@ export function NewProjectCard({ onCreate }: Props) {
 
   if (!pickedPath) {
     return (
-      <div className={styles.card}>
-        <h3 className={styles.title}>New project</h3>
+      <div className={`${styles.card} ${styles.cardPrimary}`}>
+        <div className={styles.titleRow}>
+          <FolderPlus size={16} strokeWidth={1.75} />
+          <h3 className={styles.title}>New project</h3>
+        </div>
         <p className={styles.muted}>
           Pick or create an empty folder. WorldBuilder will scaffold templates,
           entries, and assets inside it.
@@ -59,8 +63,11 @@ export function NewProjectCard({ onCreate }: Props) {
   }
 
   return (
-    <form className={styles.card} onSubmit={handleSubmit}>
-      <h3 className={styles.title}>New project</h3>
+    <form className={`${styles.card} ${styles.cardPrimary}`} onSubmit={handleSubmit}>
+      <div className={styles.titleRow}>
+        <FolderPlus size={16} strokeWidth={1.75} />
+        <h3 className={styles.title}>New project</h3>
+      </div>
       <p className={styles.path}>{pickedPath}</p>
 
       <label className={styles.field}>

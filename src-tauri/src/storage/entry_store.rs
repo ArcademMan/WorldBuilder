@@ -14,13 +14,20 @@
 //! Save is a single transaction: upsert entries row, then replace-all the
 //! companion rows for the entry.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::OnceLock;
 
+use regex::Regex;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use serde_json::Value;
 use uuid::Uuid;
+
+/// Field key used to store wikilink-derived backlinks discovered in an
+/// entry's body. Kept distinct from any template field key so the two
+/// origins remain identifiable in the backlinks panel.
+const BODY_REF_FIELD_KEY: &str = "body";
 
 use crate::domain::entry::Entry;
 use crate::domain::field::FieldType;
@@ -346,9 +353,99 @@ pub fn save_entry(root: &Path, entry: Entry) -> AppResult<Entry> {
         }
     }
 
+    // Body wikilinks → backlinks. Resolved against current entry names
+    // and inserted with a synthetic `body` field_key. Deduplicated per
+    // (source, target) so 7 mentions of [[B]] in A's body count once.
+    let body_refs = extract_body_wikilink_targets(&tx, &entry.id, &entry.body)?;
+    for (pos, target_id) in body_refs.iter().enumerate() {
+        tx.execute(
+            "INSERT INTO entry_entry_refs (entry_id, field_key, target_id, position)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![entry.id, BODY_REF_FIELD_KEY, target_id, pos as i64],
+        )?;
+    }
+
     tx.commit()?;
     drop(conn);
     read_entry(root, &entry.id)
+}
+
+/// Parse `[[Name]]` and `[[Template:Name]]` wikilinks from a body and
+/// resolve each to an entry id. A match is kept only when it resolves
+/// to exactly one entry — ambiguous / missing targets are silently
+/// dropped (the body renderer surfaces them as broken links). Results
+/// are deduplicated in first-seen order so the position column reflects
+/// reading order.
+fn extract_body_wikilink_targets(
+    conn: &Connection,
+    source_entry_id: &str,
+    body: &str,
+) -> AppResult<Vec<String>> {
+    static WIKILINK_RE: OnceLock<Regex> = OnceLock::new();
+    let re = WIKILINK_RE
+        .get_or_init(|| Regex::new(r"\[\[([^\[\]\n]+?)\]\]").expect("valid wikilink regex"));
+
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut out: Vec<String> = Vec::new();
+
+    for cap in re.captures_iter(body) {
+        let raw = cap.get(1).map(|m| m.as_str()).unwrap_or("").trim();
+        if raw.is_empty() {
+            continue;
+        }
+        let (template_name, entry_name) = match raw.find(':') {
+            Some(i) => (Some(raw[..i].trim()), raw[i + 1..].trim()),
+            None => (None, raw),
+        };
+        if entry_name.is_empty() {
+            continue;
+        }
+
+        if let Some(id) = resolve_wikilink(conn, template_name, entry_name)? {
+            // Don't backlink an entry to itself.
+            if id == source_entry_id {
+                continue;
+            }
+            if seen.insert(id.clone()) {
+                out.push(id);
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn resolve_wikilink(
+    conn: &Connection,
+    template_name: Option<&str>,
+    entry_name: &str,
+) -> AppResult<Option<String>> {
+    let rows: Vec<String> = if let Some(t) = template_name {
+        let mut stmt = conn.prepare(
+            "SELECT e.id FROM entries e
+             JOIN templates t ON t.id = e.template_id
+             WHERE LOWER(TRIM(e.name)) = LOWER(TRIM(?1))
+               AND LOWER(TRIM(t.name)) = LOWER(TRIM(?2))",
+        )?;
+        let collected: Vec<String> = stmt
+            .query_map(params![entry_name, t], |r| r.get::<_, String>(0))?
+            .collect::<Result<_, _>>()?;
+        collected
+    } else {
+        let mut stmt = conn.prepare(
+            "SELECT id FROM entries WHERE LOWER(TRIM(name)) = LOWER(TRIM(?1))",
+        )?;
+        let collected: Vec<String> = stmt
+            .query_map(params![entry_name], |r| r.get::<_, String>(0))?
+            .collect::<Result<_, _>>()?;
+        collected
+    };
+    // Ambiguity (>1 match) counts as unresolved so the user is nudged
+    // to disambiguate with a `Template:` prefix.
+    if rows.len() == 1 {
+        Ok(rows.into_iter().next())
+    } else {
+        Ok(None)
+    }
 }
 
 /// All incoming references to `id`, sorted by source name. Powers the

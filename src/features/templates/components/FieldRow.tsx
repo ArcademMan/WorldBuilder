@@ -1,4 +1,6 @@
-import { Button } from "../../../components/Button";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
+
+import { TemplateIcon } from "../../../components/TemplateIcon";
 import type { FieldDef, FieldType, Template, Vocabulary } from "../../../types";
 
 import styles from "../TemplateEditorPage.module.css";
@@ -79,17 +81,42 @@ export function FieldRow({
 
   return (
     <div className={styles.fieldRow}>
-      <div className={styles.fieldRowGrid}>
-        <div className={styles.formField}>
-          <label className={styles.label}>Key</label>
-          <input
-            className={styles.input}
-            value={field.key}
-            placeholder="e.g. species"
-            onChange={(e) => onChange({ ...field, key: e.target.value })}
-          />
+      <div className={styles.fieldRowHeader}>
+        <span className={styles.fieldIndex}>#{index + 1}</span>
+        <div className={styles.fieldActions}>
+          <button
+            type="button"
+            className={styles.iconAction}
+            disabled={index === 0}
+            title="Move up"
+            aria-label="Move up"
+            onClick={onMoveUp}
+          >
+            <ChevronUp size={14} strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            className={styles.iconAction}
+            disabled={index === total - 1}
+            title="Move down"
+            aria-label="Move down"
+            onClick={onMoveDown}
+          >
+            <ChevronDown size={14} strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            className={`${styles.iconAction} ${styles.iconActionDanger}`}
+            title="Remove field"
+            aria-label="Remove field"
+            onClick={onRemove}
+          >
+            <X size={14} strokeWidth={2} />
+          </button>
         </div>
+      </div>
 
+      <div className={styles.fieldRowGrid}>
         <div className={styles.formField}>
           <label className={styles.label}>Label</label>
           <input
@@ -114,37 +141,18 @@ export function FieldRow({
             ))}
           </select>
         </div>
-
-        <div className={styles.fieldActions}>
-          <Button
-            variant="ghost"
-            disabled={index === 0}
-            title="Move up"
-            onClick={onMoveUp}
-          >
-            ↑
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={index === total - 1}
-            title="Move down"
-            onClick={onMoveDown}
-          >
-            ↓
-          </Button>
-          <Button variant="ghost" title="Remove field" onClick={onRemove}>
-            ✕
-          </Button>
-        </div>
       </div>
 
       {keyError && <p className={styles.fieldError}>{keyError}</p>}
 
       {needsRef && (
         <div className={styles.formField}>
-          <label className={styles.label}>
-            Target template{field.type === "refList" ? "(s)" : ""}
-          </label>
+          <label className={styles.label}>Allowed target templates</label>
+          <p className={styles.cardHint}>
+            {field.type === "refList"
+              ? "This field will store a list of entries. Pick one or more templates whose entries can be linked."
+              : "This field will store a single entry. Pick one or more templates whose entries can be linked."}
+          </p>
           {templates.length === 0 ? (
             <p className={styles.fieldError}>
               No other templates yet — create one first to use this field type.
@@ -158,7 +166,7 @@ export function FieldRow({
                     checked={selectedRefIds.has(t.id)}
                     onChange={() => toggleRefTemplate(t.id)}
                   />
-                  {t.icon ? `${t.icon} ` : ""}
+                  {t.icon && <TemplateIcon icon={t.icon} size={14} />}
                   {t.name}
                 </label>
               ))}
@@ -196,6 +204,7 @@ export function FieldRow({
           <input
             className={styles.input}
             value={field.helpText ?? ""}
+            placeholder="Shown under the field in the entry editor"
             onChange={(e) =>
               onChange({ ...field, helpText: e.target.value || undefined })
             }

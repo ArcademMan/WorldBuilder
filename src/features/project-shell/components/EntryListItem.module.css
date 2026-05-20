@@ -1,5 +1,7 @@
 .item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   color: var(--color-text);
@@ -18,8 +20,14 @@
 }
 
 .name {
-  display: block;
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.brokenIcon {
+  flex: 0 0 auto;
+  color: #d73a49;
 }

@@ -4,6 +4,7 @@ import { useEntriesContext } from "../../features/project-shell/entries-context"
 import { useTemplatesContext } from "../../features/project-shell/templates-context";
 import type { Entry, Template } from "../../types";
 
+import { TemplateIcon } from "../TemplateIcon";
 import styles from "./fields.module.css";
 
 type Props = {
@@ -144,8 +145,8 @@ export function RefAutocomplete({
                     void createIn(t.id);
                   }}
                 >
-                  + Create "{trimmed}" in {t.icon ? `${t.icon} ` : ""}
-                  {t.name}
+                  + Create "{trimmed}" in{" "}
+                  {t.icon && <TemplateIcon icon={t.icon} size={13} />} {t.name}
                 </button>
               </li>
             ))}

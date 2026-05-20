@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { TemplateIcon } from "../../components/TemplateIcon";
+import { COMMON_FIELD_DEFS } from "../../constants/common-fields";
 import * as api from "../../lib/api";
 import type { Backlink } from "../../types";
 import { useTemplatesContext } from "../project-shell/templates-context";
@@ -57,7 +59,9 @@ export function BacklinksPanel({ projectPath, entryId, refreshKey }: Props) {
         {items.map((b) => {
           const tpl = templatesById.get(b.sourceTemplateId);
           const fieldLabel =
-            tpl?.fields.find((f) => f.key === b.fieldKey)?.label ?? b.fieldKey;
+            tpl?.fields.find((f) => f.key === b.fieldKey)?.label ??
+            COMMON_FIELD_DEFS.find((f) => f.key === b.fieldKey)?.label ??
+            b.fieldKey;
           return (
             <li
               key={`${b.sourceEntryId}-${b.fieldKey}`}
@@ -67,8 +71,8 @@ export function BacklinksPanel({ projectPath, entryId, refreshKey }: Props) {
                 to={`/project/entry/${b.sourceEntryId}`}
                 className={styles.link}
               >
-                {tpl?.icon ? `${tpl.icon} ` : ""}
-                {b.sourceName}
+                {tpl?.icon && <TemplateIcon icon={tpl.icon} size={14} />}
+                <span>{b.sourceName}</span>
               </Link>
               <span className={styles.meta}>
                 {tpl ? `${tpl.name} · ` : ""}

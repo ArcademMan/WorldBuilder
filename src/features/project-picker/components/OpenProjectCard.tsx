@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FolderOpen } from "lucide-react";
 
 import { Button } from "../../../components/Button";
 import * as api from "../../../lib/api";
@@ -29,7 +30,10 @@ export function OpenProjectCard({ onOpen }: Props) {
 
   return (
     <div className={styles.card}>
-      <h3 className={styles.title}>Open project</h3>
+      <div className={styles.titleRow}>
+        <FolderOpen size={16} strokeWidth={1.75} />
+        <h3 className={styles.title}>Open project</h3>
+      </div>
       <p className={styles.muted}>
         Pick a folder that already contains a <code>worldbuilder.json</code>.
       </p>

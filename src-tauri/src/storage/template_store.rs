@@ -11,6 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
 use crate::domain::field::{FieldDef, FieldType};
+use crate::domain::layout::{display_str, parse_display, LayoutItem, LayoutSection};
 use crate::domain::template::Template;
 use crate::error::{AppError, AppResult};
 use crate::storage::paths::ProjectPaths;
@@ -98,13 +99,70 @@ fn load_template(conn: &Connection, id: &str) -> AppResult<Option<Template>> {
         return Ok(None);
     };
     let fields = load_template_fields(conn, &tid)?;
+    let layout = load_template_layout(conn, &tid)?;
     Ok(Some(Template {
         id: tid,
         name,
         parent_id,
         icon,
         fields,
+        layout,
     }))
+}
+
+fn load_template_layout(conn: &Connection, template_id: &str) -> AppResult<Vec<LayoutSection>> {
+    let mut sections: Vec<LayoutSection> = {
+        let mut stmt = conn.prepare(
+            "SELECT id, title, columns FROM template_layout_sections
+             WHERE template_id = ?1 ORDER BY position",
+        )?;
+        let rows: Vec<(String, Option<String>, i64)> = stmt
+            .query_map(params![template_id], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, Option<String>>(1)?,
+                    r.get::<_, i64>(2)?,
+                ))
+            })?
+            .collect::<Result<_, _>>()?;
+        rows.into_iter()
+            .map(|(id, title, columns)| LayoutSection {
+                id: Some(id),
+                title,
+                columns,
+                items: Vec::new(),
+            })
+            .collect()
+    };
+
+    for section in sections.iter_mut() {
+        let Some(sid) = section.id.as_deref() else { continue };
+        let mut stmt = conn.prepare(
+            "SELECT id, field_key, column_index, display
+             FROM template_layout_items
+             WHERE section_id = ?1 ORDER BY position",
+        )?;
+        let rows: Vec<(String, String, i64, String)> = stmt
+            .query_map(params![sid], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)?,
+                    r.get::<_, String>(3)?,
+                ))
+            })?
+            .collect::<Result<_, _>>()?;
+        section.items = rows
+            .into_iter()
+            .map(|(id, field_key, column_index, display)| LayoutItem {
+                id: Some(id),
+                field_key,
+                column_index,
+                display: parse_display(&display),
+            })
+            .collect();
+    }
+    Ok(sections)
 }
 
 fn load_template_fields(conn: &Connection, template_id: &str) -> AppResult<Vec<FieldDef>> {
@@ -247,6 +305,49 @@ pub fn save_template(root: &Path, template: Template) -> AppResult<Template> {
                 position as i64,
             ],
         )?;
+    }
+
+    // Replace-all layout. Sections cascade-delete their items, so wiping
+    // the section table is enough.
+    tx.execute(
+        "DELETE FROM template_layout_sections WHERE template_id = ?1",
+        params![template.id],
+    )?;
+    for (sec_pos, sec) in template.layout.iter().enumerate() {
+        let section_id = sec
+            .id
+            .clone()
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        tx.execute(
+            "INSERT INTO template_layout_sections (id, template_id, position, title, columns)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                section_id,
+                template.id,
+                sec_pos as i64,
+                sec.title,
+                sec.columns,
+            ],
+        )?;
+        for (it_pos, item) in sec.items.iter().enumerate() {
+            let item_id = item
+                .id
+                .clone()
+                .unwrap_or_else(|| Uuid::new_v4().to_string());
+            tx.execute(
+                "INSERT INTO template_layout_items
+                 (id, section_id, position, column_index, field_key, display)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    item_id,
+                    section_id,
+                    it_pos as i64,
+                    item.column_index,
+                    item.field_key,
+                    display_str(&item.display),
+                ],
+            )?;
+        }
     }
 
     tx.commit()?;

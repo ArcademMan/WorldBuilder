@@ -3,6 +3,7 @@
 
 pub mod entry;
 pub mod field;
+pub mod layout;
 pub mod project;
 pub mod template;
 pub mod vocabulary;

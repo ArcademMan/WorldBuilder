@@ -1,3 +1,5 @@
+import { Folder, X, ChevronRight } from "lucide-react";
+
 import { Button } from "../../../components/Button";
 import { useRecents } from "../../../hooks/use-recents";
 
@@ -18,6 +20,9 @@ export function RecentsList({ onOpen }: Props) {
     <ul className={styles.list}>
       {items.map((item) => (
         <li key={item.path} className={styles.item}>
+          <span className={styles.folderIcon}>
+            <Folder size={16} strokeWidth={1.75} />
+          </span>
           <button
             type="button"
             className={styles.itemMain}
@@ -26,13 +31,14 @@ export function RecentsList({ onOpen }: Props) {
             <strong>{item.name}</strong>
             <span className={styles.path}>{item.path}</span>
           </button>
+          <ChevronRight size={14} className={styles.chevron} strokeWidth={1.75} />
           <Button
             variant="ghost"
             title="Remove from recents"
             aria-label={`Remove ${item.name} from recents`}
             onClick={() => void remove(item.path)}
           >
-            ✕
+            <X size={14} strokeWidth={2} />
           </Button>
         </li>
       ))}

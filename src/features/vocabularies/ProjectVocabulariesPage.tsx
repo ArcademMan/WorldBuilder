@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
 import { useEntriesContext } from "../project-shell/entries-context";
 import { useVocabulariesContext } from "../project-shell/vocabularies-context";
 import { SYSTEM_TAGS_VOCAB_ID } from "../../types";
@@ -23,6 +24,11 @@ export function ProjectVocabulariesPage() {
 
   const [selectedId, setSelectedId] = useState<string>("");
   const [newItemLabel, setNewItemLabel] = useState("");
+  const [newVocabOpen, setNewVocabOpen] = useState(false);
+  const [newVocabName, setNewVocabName] = useState("");
+  const [newVocabError, setNewVocabError] = useState<string | null>(null);
+  const [creatingVocab, setCreatingVocab] = useState(false);
+  const newVocabInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (vocabs.length === 0) {
@@ -51,14 +57,34 @@ export function ProjectVocabulariesPage() {
   const selected = selectedId ? vocabsById.get(selectedId) : null;
   const isSystem = selectedId === SYSTEM_TAGS_VOCAB_ID;
 
-  async function handleNewVocabulary() {
-    const name = prompt("New vocabulary name:")?.trim();
-    if (!name) return;
+  function openNewVocabularyDialog() {
+    setNewVocabName("");
+    setNewVocabError(null);
+    setNewVocabOpen(true);
+    requestAnimationFrame(() => newVocabInputRef.current?.focus());
+  }
+
+  function closeNewVocabularyDialog() {
+    if (creatingVocab) return;
+    setNewVocabOpen(false);
+    setNewVocabError(null);
+  }
+
+  async function submitNewVocabulary() {
+    const name = newVocabName.trim();
+    if (!name) {
+      setNewVocabError("Name cannot be empty.");
+      return;
+    }
+    setCreatingVocab(true);
     try {
       const v = await createVocabulary(name);
       setSelectedId(v.id);
+      setNewVocabOpen(false);
     } catch (e) {
-      alert(`Failed to create vocabulary: ${e}`);
+      setNewVocabError(`Failed to create vocabulary: ${e}`);
+    } finally {
+      setCreatingVocab(false);
     }
   }
 
@@ -92,15 +118,11 @@ export function ProjectVocabulariesPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link to="/project" className={styles.backLink}>
-          ← Back to project
-        </Link>
-        <div className={styles.headerRow}>
-          <h1 className={styles.title}>Vocabularies</h1>
-          <Button variant="primary" onClick={handleNewVocabulary}>
-            + New vocabulary
-          </Button>
-        </div>
+        <h1 className={styles.title}>Vocabularies</h1>
+        <Button variant="primary" onClick={openNewVocabularyDialog} className={styles.newButton}>
+          <Plus size={16} strokeWidth={2} />
+          <span>New vocabulary</span>
+        </Button>
       </header>
 
       {vocabs.length === 0 ? (
@@ -177,6 +199,50 @@ export function ProjectVocabulariesPage() {
           </section>
         </div>
       )}
+
+      <Modal
+        open={newVocabOpen}
+        title="New vocabulary"
+        onClose={closeNewVocabularyDialog}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={closeNewVocabularyDialog}
+              disabled={creatingVocab}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void submitNewVocabulary()}
+              disabled={creatingVocab || !newVocabName.trim()}
+            >
+              {creatingVocab ? "Creating…" : "Create"}
+            </Button>
+          </>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitNewVocabulary();
+          }}
+        >
+          <input
+            ref={newVocabInputRef}
+            className={styles.modalInput}
+            placeholder="e.g. Regions, Factions…"
+            value={newVocabName}
+            onChange={(e) => {
+              setNewVocabName(e.target.value);
+              if (newVocabError) setNewVocabError(null);
+            }}
+            disabled={creatingVocab}
+          />
+        </form>
+        {newVocabError && <p className={styles.modalError}>{newVocabError}</p>}
+      </Modal>
     </main>
   );
 }

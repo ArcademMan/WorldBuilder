@@ -1,0 +1,180 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.columns {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Wiki-style flow: floated aside that body content wraps around. */
+.wikiFlow {
+  /* clearfix so the section's bottom border sits below the floated aside */
+}
+.wikiFlow::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+.wikiAside {
+  float: right;
+  width: clamp(220px, 40%, 360px);
+  margin: 0 0 var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The body column inside a wikiFlow must be plain block flow (not flex)
+   so its content wraps around the floated aside. */
+.wikiFlow > .column {
+  display: block;
+}
+.wikiFlow > .column > * + * {
+  margin-top: var(--space-3);
+}
+
+.orphans {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.missing {
+  margin: 0;
+  padding: var(--space-2);
+  color: #d73a49;
+  background-color: rgba(215, 58, 73, 0.08);
+  border: 1px dashed rgba(215, 58, 73, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.kvTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.kvTable tr + tr {
+  border-top: 1px solid var(--color-border);
+}
+
+.kvKey {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  width: 35%;
+  vertical-align: top;
+  background-color: var(--color-bg);
+}
+
+.kvReq {
+  color: #d73a49;
+  margin-left: 2px;
+}
+
+.kvVal {
+  padding: var(--space-2) var(--space-3);
+  vertical-align: middle;
+}
+
+.imageDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.imagePlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  background-color: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.imageUploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-2);
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background-color 0.12s;
+}
+
+.imageUploadPlaceholder:hover:not(:disabled) {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-elevated);
+}
+
+.imageUploadPlaceholder:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.imageUploadIcon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.imageUploadHint {
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Read-only field rendering (viewer mode) */
+.readField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.readLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}

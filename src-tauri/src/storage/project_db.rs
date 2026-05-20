@@ -63,6 +63,29 @@ CREATE TABLE IF NOT EXISTS template_fields (
     UNIQUE(template_id, key)
 );
 
+-- Layout: ordered sections owned by a template, each with N columns.
+CREATE TABLE IF NOT EXISTS template_layout_sections (
+    id          TEXT PRIMARY KEY,
+    template_id TEXT NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    position    INTEGER NOT NULL,
+    title       TEXT,
+    columns     INTEGER NOT NULL DEFAULT 1
+);
+
+-- A single layout item: a template field rendered in a specific column
+-- of a section with a chosen display mode (field / image-{size} /
+-- table-row). field_key is intentionally not a hard FK — the template
+-- editor saves layout + fields in the same transaction so consistency
+-- is enforced by the writer, not the schema.
+CREATE TABLE IF NOT EXISTS template_layout_items (
+    id           TEXT PRIMARY KEY,
+    section_id   TEXT NOT NULL REFERENCES template_layout_sections(id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL,
+    column_index INTEGER NOT NULL DEFAULT 0,
+    field_key    TEXT NOT NULL,
+    display      TEXT NOT NULL DEFAULT 'field'
+);
+
 -- Entries: row per entry + companion tables for tags, scalar values, vocab refs.
 CREATE TABLE IF NOT EXISTS entries (
     id          TEXT PRIMARY KEY,
@@ -131,6 +154,8 @@ CREATE        INDEX IF NOT EXISTS idx_entries_template      ON entries(template_
 CREATE        INDEX IF NOT EXISTS idx_entry_tags_item       ON entry_tags(item_id);
 CREATE        INDEX IF NOT EXISTS idx_entry_vocab_refs_item ON entry_vocab_refs(item_id);
 CREATE        INDEX IF NOT EXISTS idx_entry_refs_target     ON entry_entry_refs(target_id);
+CREATE        INDEX IF NOT EXISTS idx_layout_sections_tpl   ON template_layout_sections(template_id);
+CREATE        INDEX IF NOT EXISTS idx_layout_items_section  ON template_layout_items(section_id);
 ";
 
 /// Opens (creates if missing) the project DB and applies the schema.
